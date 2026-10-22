@@ -2,16 +2,24 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gap.h>
+#include <zephyr/bluetooth/uuid.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
+#define BT_UUID_GATEWAY_SERVICE_VAL \
+        BT_UUID_128_ENCODE(0x00000001, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+};
+
+static const struct bt_data sd[] = {
+        BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_GATEWAY_SERVICE_VAL),
 };
 
 int main(void)
@@ -27,7 +35,7 @@ int main(void)
         }
         LOG_INF("Bluetooth initialized");
 
-        err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), NULL, 0);
+        err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
         if (err) {
 	        LOG_ERR("Advertising failed to start (err %d)", err);
 	        return -1;
