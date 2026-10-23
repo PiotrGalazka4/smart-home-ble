@@ -14,6 +14,17 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #define BT_UUID_GATEWAY_SERVICE_VAL \
         BT_UUID_128_ENCODE(0x00000001, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
 
+/* ---------------------------------------------------------------------------
+ * State
+ * ------------------------------------------------------------------------- */
+
+static struct bt_conn *auth_conn;
+static struct k_work adv_work;
+
+/* ---------------------------------------------------------------------------
+ * Advertising 
+ * ------------------------------------------------------------------------- */
+
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
@@ -23,7 +34,59 @@ static const struct bt_data sd[] = {
         BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_GATEWAY_SERVICE_VAL),
 };
 
-static struct bt_conn *auth_conn;
+static void adv_work_handler(struct k_work *work)
+{
+	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+        
+	if (err == -ENOMEM) {
+                LOG_ERR("No free connections slots");
+	} else if (err == -EALREADY) {
+                LOG_INF("Advertising already started");
+        } else if (err) {
+                LOG_ERR("Advertising failed to start (err %d)", err);
+                return;
+        } else {
+                LOG_INF("Advertising successfully started");
+        }
+}
+
+static void advertising_start(void)
+{
+	k_work_submit(&adv_work);
+}
+
+/* ---------------------------------------------------------------------------
+ * Connection callbacks
+ * ------------------------------------------------------------------------- */
+
+void on_connected(struct bt_conn *conn, uint8_t err)
+{
+        advertising_start();
+}
+
+void on_disconnected(struct bt_conn *conn, uint8_t reason)
+{
+        if (auth_conn == conn) {
+                bt_conn_unref(auth_conn);
+                auth_conn = NULL;
+        }
+}
+
+void on_recycled(void)
+{
+        advertising_start();
+}
+
+struct bt_conn_cb conn_callbacks = {
+        .connected = on_connected,
+        .disconnected = on_disconnected,
+        .recycled = on_recycled,
+};
+
+/* ---------------------------------------------------------------------------
+ * Authentication callbacks
+ * ------------------------------------------------------------------------- */
+
 
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
 {
@@ -97,6 +160,12 @@ int main(void)
 		return -1;
 	}
 
+        err = bt_conn_cb_register(&conn_callbacks);
+	if (err) {
+		LOG_INF("Failed to register connection callbacks.\n");
+		return -1;
+	}
+
         err = bt_enable(NULL);
         if (err) {
                 LOG_ERR("Bluetooth init failed (err %d)", err);
@@ -104,10 +173,6 @@ int main(void)
         }
         LOG_INF("Bluetooth initialized");
 
-        err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-        if (err) {
-	        LOG_ERR("Advertising failed to start (err %d)", err);
-	        return -1;
-        }      
-        LOG_INF("Advertising successfully started");
+        k_work_init(&adv_work, adv_work_handler);
+        advertising_start();
 }
