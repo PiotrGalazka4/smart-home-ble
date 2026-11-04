@@ -7,6 +7,8 @@
 #include <dk_buttons_and_leds.h>
 #include <zephyr/settings/settings.h>
 
+#include "gateway_service.h"
+
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
@@ -17,9 +19,6 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #define PAIRING_BUTTON DK_BTN3_MSK
 
 #define PAIRING_TIMEOUT K_SECONDS(30)
-
-#define BT_UUID_GATEWAY_SERVICE_VAL \
-        BT_UUID_128_ENCODE(0x00000001, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
 
 #define BT_LE_ADV_CONN_ACCEPT_LIST                                                                 \
 	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_FILTER_CONN,                \
