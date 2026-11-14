@@ -40,10 +40,13 @@ static bool pairing_enabled = false;
 
 static void add_to_accept_list(const struct bt_bond_info *info, void *user_data)
 {
+        char addr[BT_ADDR_LE_STR_LEN];
+        bt_addr_le_to_str(&info->addr, addr, sizeof(addr));
 	int err = bt_le_filter_accept_list_add(&info->addr);
-	LOG_INF("Added following peer to whitelist: %x %x \n",info->addr.a.val[0],info->addr.a.val[1]);
 	if (err) {
-		LOG_INF("Cannot add peer to Filter Accept List (err: %d)\n", err);
+		LOG_ERR("Cannot add peer to Filter Accept List (err: %d)", err);
+	} else {
+		LOG_INF("Added following peer to Filter Accept List: %s", addr);
 	}
 }
 
@@ -159,7 +162,7 @@ static struct bt_conn_auth_info_cb conn_info_callbacks = {
  * Connection callbacks
  * ------------------------------------------------------------------------- */
 
-void on_connected(struct bt_conn *conn, uint8_t err)
+static void on_connected(struct bt_conn *conn, uint8_t err)
 {
         char addr[BT_ADDR_LE_STR_LEN];
 
@@ -174,7 +177,7 @@ void on_connected(struct bt_conn *conn, uint8_t err)
         advertising_start();
 }
 
-void on_disconnected(struct bt_conn *conn, uint8_t reason)
+static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 {
         LOG_INF("Disconnected (reason 0x%02x)", reason);
 
@@ -184,7 +187,7 @@ void on_disconnected(struct bt_conn *conn, uint8_t reason)
         }
 }
 
-void on_recycled(void)
+static void on_recycled(void)
 {
         advertising_start();
 }
@@ -337,8 +340,12 @@ int main(void)
         }
         LOG_INF("Bluetooth initialized");
 
-        settings_load();
-        bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY); // Unpair all devices on startup for testing purposes
+        err = settings_load();
+        if (err) {
+                LOG_ERR("Failed to load settings (err %d)", err);
+                return 0;
+        }
+        // bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY); // Unpair all devices on startup for testing purposes
         setup_accept_list();
         advertising_start();
 }
