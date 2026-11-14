@@ -87,6 +87,40 @@ static ssize_t light_state_read(struct bt_conn *conn, const struct bt_gatt_attr 
     
 }
 
+static ssize_t light_state_write(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    if (len != sizeof(uint8_t)) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    }
+
+    if (offset != 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+
+    if(gateway_service_cb.light_state_write) {
+        uint8_t new_light_state = *(const uint8_t *)buf;
+
+        if (new_light_state == 0x00 || new_light_state == 0x01) {
+
+            bool state_bool = new_light_state;
+            
+            gateway_service_cb.light_state_write(state_bool);
+            light_state = state_bool;
+            LOG_INF("Light state write: %d", new_light_state);
+            return len;
+
+        } else {
+            LOG_WRN("Invalid light state value: %d", new_light_state);
+            return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
+        }
+
+    }
+
+    LOG_INF("Light state write callback not set");
+    return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+
+}
+
 static ssize_t light_delay_time_read(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
 {
     LOG_INF("Light delay time read: %d", light_delay_time);
@@ -125,7 +159,7 @@ BT_GATT_SERVICE_DEFINE(heating_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_HEATING_SERV
 );
 
 BT_GATT_SERVICE_DEFINE(light_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_LIGHT_SERVICE),
-    BT_GATT_CHARACTERISTIC(BT_UUID_LIGHT_STATE, BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_READ_AUTHEN, light_state_read, NULL, &light_state),
+    BT_GATT_CHARACTERISTIC(BT_UUID_LIGHT_STATE, BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_WRITE_AUTHEN, light_state_read, light_state_write, &light_state),
     BT_GATT_CCC(NULL, BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_WRITE_AUTHEN),
     BT_GATT_CHARACTERISTIC(BT_UUID_LIGHT_DELAY_TIME, BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE, BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_WRITE_AUTHEN, light_delay_time_read, light_delay_time_write, &light_delay_time) 
 );
@@ -137,6 +171,7 @@ int bt_gateway_service_init(struct bt_gateway_service_cb *callbacks)
         gateway_service_cb.heating_current_temp_read = callbacks->heating_current_temp_read;
         gateway_service_cb.light_delay_time_write = callbacks->light_delay_time_write;
         gateway_service_cb.light_state_read = callbacks->light_state_read;
+        gateway_service_cb.light_state_write = callbacks->light_state_write;
     }
 
     return 0;

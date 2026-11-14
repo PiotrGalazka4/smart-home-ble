@@ -282,6 +282,11 @@ static bool light_state_read_cb(void)
         return true;
 }
 
+static void light_state_write_cb(const bool state)
+{
+        LOG_INF("Light state write callback: %d", state);
+}
+
 static void light_delay_time_write_cb(const uint16_t delay_time)
 {
         LOG_INF("Light delay time write callback: %d", delay_time);
@@ -291,6 +296,7 @@ static struct bt_gateway_service_cb gateway_service_cb = {
         .heating_target_temp_write = heating_target_temp_write_cb,
         .heating_current_temp_read = heating_current_temp_read_cb,
         .light_state_read = light_state_read_cb,
+        .light_state_write = light_state_write_cb,
         .light_delay_time_write = light_delay_time_write_cb,
 };
 
