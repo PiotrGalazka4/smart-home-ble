@@ -259,6 +259,38 @@ static struct bt_conn_auth_cb conn_auth_callbacks = {
 	.cancel = auth_cancel,
 };
 
+/* ---------------------------------------------------------------------------
+ * gateway service callbacks
+ * ------------------------------------------------------------------------- */
+static void heating_target_temp_write_cb(const uint16_t target_temp)
+{
+        LOG_INF("Heating target temperature write callback: %d", target_temp);
+}
+
+static uint16_t heating_current_temp_read_cb(void)
+{
+        LOG_INF("Heating current temperature read callback");
+        return 25;
+}
+
+static bool light_state_read_cb(void)
+{
+        LOG_INF("Light state read callback");
+        return true;
+}
+
+static void light_delay_time_write_cb(const uint16_t delay_time)
+{
+        LOG_INF("Light delay time write callback: %d", delay_time);
+}
+
+static struct bt_gateway_service_cb gateway_service_cb = {
+        .heating_target_temp_write = heating_target_temp_write_cb,
+        .heating_current_temp_read = heating_current_temp_read_cb,
+        .light_state_read = light_state_read_cb,
+        .light_delay_time_write = light_delay_time_write_cb,
+};
+
 int main(void)
 {
         int err;
@@ -271,6 +303,12 @@ int main(void)
         err = dk_buttons_init(button_change);
         if (err) {
                 LOG_ERR("Cannot init buttons (err: %d)", err);
+                return -1;
+        }
+
+        err = bt_gateway_service_init(&gateway_service_cb);
+        if (err) {
+                LOG_ERR("Failed to initialize gateway service (err: %d)", err);
                 return -1;
         }
 
