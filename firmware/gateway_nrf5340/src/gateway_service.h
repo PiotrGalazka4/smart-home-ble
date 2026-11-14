@@ -32,4 +32,18 @@
 #define BT_UUID_LIGHT_DELAY_TIME BT_UUID_DECLARE_128(BT_UUID_LIGHT_DELAY_TIME_VAL)
 #define BT_UUID_LIGHT_STATE BT_UUID_DECLARE_128(BT_UUID_LIGHT_STATE_VAL)
 
+typedef void (*heating_target_temp_write_cb_t)(const uint16_t target_temp);
+typedef uint16_t (*heating_current_temp_read_cb_t)(void);
+typedef bool (*light_state_read_cb_t)(void);
+typedef void (*light_delay_time_write_cb_t)(const uint16_t delay_time);
+
+struct bt_gateway_service_cb{
+    heating_target_temp_write_cb_t heating_target_temp_write;
+    heating_current_temp_read_cb_t heating_current_temp_read;
+    light_state_read_cb_t light_state_read;
+    light_delay_time_write_cb_t light_delay_time_write;
+};
+
+int bt_gateway_service_init(struct bt_gateway_service_cb *callbacks);
+
 #endif
