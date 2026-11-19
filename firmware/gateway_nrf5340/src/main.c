@@ -265,15 +265,16 @@ static struct bt_conn_auth_cb conn_auth_callbacks = {
 /* ---------------------------------------------------------------------------
  * gateway service callbacks
  * ------------------------------------------------------------------------- */
-static void heating_target_temp_write_cb(const uint16_t target_temp)
+static int heating_target_temp_write_cb(const uint16_t target_temp)
 {
-        LOG_INF("Heating target temperature write callback: %d", target_temp);
+        LOG_INF("Heating target temperature write callback: %d.%dC", target_temp/10, target_temp%10);
+        return 0;
 }
 
-static uint16_t heating_current_temp_read_cb(void)
+static int16_t heating_current_temp_read_cb(void)
 {
         LOG_INF("Heating current temperature read callback");
-        return 25;
+        return 250; // 25.0°C
 }
 
 static bool light_state_read_cb(void)
@@ -282,14 +283,16 @@ static bool light_state_read_cb(void)
         return true;
 }
 
-static void light_state_write_cb(const bool state)
+static int light_state_write_cb(const bool state)
 {
         LOG_INF("Light state write callback: %d", state);
+        return 0;
 }
 
-static void light_delay_time_write_cb(const uint16_t delay_time)
+static int light_delay_time_write_cb(const uint16_t delay_time)
 {
         LOG_INF("Light delay time write callback: %d", delay_time);
+        return 0;
 }
 
 static struct bt_gateway_service_cb gateway_service_cb = {
